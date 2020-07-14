@@ -1,7 +1,7 @@
 package songs;
 
 public class SongStore {
-    private final Songs rawSongs;
+    public final Songs rawSongs;
 
     public SongStore(Songs songs) {
         rawSongs = songs;

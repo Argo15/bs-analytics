@@ -10,7 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Optional;
 
-class DownloadUserRecentScores {
+public class DownloadUserRecentScores {
     private static String RECENT_SCORE_API =
             "https://new.scoresaber.com/api/player/" +
             Utils.ARGO_USER_ID +
