@@ -1,5 +1,7 @@
 package common;
 
+import org.codehaus.jackson.map.ObjectMapper;
+
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,6 +16,7 @@ public class Utils {
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/top/";
     public static String RECENT_SCORE_FILEPATH =
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/recent/";
+    public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static Optional<String> getPageJson(String page) throws IOException, InterruptedException {
         System.out.println(page);

@@ -10,20 +10,25 @@ import java.util.Arrays;
 
 public class LoadUser {
 
-    public LoadUser()
-    {
-
-    }
+    public LoadUser() { }
 
     public static User loadUser() throws IOException {
         User user = new User(Utils.ARGO_USER_ID);
-        File topScoreDirectory = new File(Utils.TOP_SCORE_FILEPATH);
-        for (File file : topScoreDirectory.listFiles()) {
-            ObjectMapper objectMapper = new ObjectMapper();
-            Scores parsedScores = objectMapper.readValue(file, Scores.class);
-            user.addScores(Arrays.asList(parsedScores.scores));
+
+        // Read full dump of scores
+        for (File file : new File(Utils.TOP_SCORE_FILEPATH).listFiles()) {
+            Scores parsedScores = Utils.OBJECT_MAPPER.readValue(file, Scores.class);
+            user.addScores(parsedScores);
             System.out.println(file.getName() + " " + parsedScores.scores[0].pp);
         }
+
+        // Read recent scores since last dump
+        for (File file : new File(Utils.RECENT_SCORE_FILEPATH).listFiles()) {
+            Scores parsedScores = Utils.OBJECT_MAPPER.readValue(file, Scores.class);
+            user.addScores(parsedScores);
+            System.out.println(file.getName() + " " + parsedScores.scores[0].pp);
+        }
+
         return user;
     }
 
