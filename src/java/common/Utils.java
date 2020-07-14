@@ -11,12 +11,14 @@ import java.net.URL;
 import java.util.Optional;
 
 public class Utils {
+    public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     public static String ARGO_USER_ID = "76561198024990541";
     public static String TOP_SCORE_FILEPATH =
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/top/";
     public static String RECENT_SCORE_FILEPATH =
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/recent/";
-    public static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    public static String SONGS_FILEPATH = "api-data/maps.json";
 
     public static Optional<String> getPageJson(String page) throws IOException, InterruptedException {
         System.out.println(page);
