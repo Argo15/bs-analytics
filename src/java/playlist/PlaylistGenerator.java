@@ -1,6 +1,7 @@
 package playlist;
 
 import common.Utils;
+import data.DownloadSongs;
 import data.DownloadUserRecentScores;
 import org.codehaus.jackson.map.ObjectWriter;
 import org.codehaus.jackson.util.DefaultPrettyPrinter;
@@ -32,13 +33,21 @@ public class PlaylistGenerator {
     }
 
     public void run() throws IOException {
-        buildPlaylist(stars(0, 1).and(played()), worstRank(), 30, "Worst 0 Stars", "worst 30 0-1 star songs", "0.thumb");
-        buildPlaylist(stars(1, 2).and(played()), worstRank(), 30, "Worst 1 Stars", "worst 30 1-2 star songs", "1.thumb");
-        buildPlaylist(stars(2, 3).and(played()), worstRank(), 30, "Worst 2 Stars", "worst 30 2-3 star songs", "2.thumb");
-        buildPlaylist(stars(3, 4).and(played()), worstRank(), 30, "Worst 3 Stars", "worst 30 3-4 star songs", "3.thumb");
-        buildPlaylist(stars(4, 5).and(played()), worstRank(), 30, "Worst 4 Stars", "worst 30 4-5 star songs", "4.thumb");
-        buildPlaylist(stars(5, 6).and(played()), worstRank(), 30, "Worst 5 Stars", "worst 30 5-6 star songs", "5.thumb");
-        buildPlaylist(stars(0, 6).and(played().negate()), lowestStars(), 300, "Unplayed Maps", "unplayed songs prioritized by star rating", "easy.thumb");
+        buildPlaylist(stars(0, 5).and(played().negate()), lowestStars(), 500, "xUnbeaten 0-5 stars", "unbeaten maps under 5 star rating", "easy.thumb");
+        buildPlaylist(stars(5, 6).and(played().negate()), lowestStars(), 500, "xUnbeaten 5 stars", "unbeaten maps with 5 star rating", "easy.thumb");
+        buildPlaylist(stars(6, 7).and(played().negate()), lowestStars(), 500, "xUnbeaten 6 stars", "unbeaten maps with 6 star rating", "easy.thumb");
+        buildPlaylist(stars(7, 8).and(played().negate()), lowestStars(), 500, "xUnbeaten 7 stars", "unbeaten maps with 7 star rating", "easy.thumb");
+        buildPlaylist(stars(8, 9).and(played().negate()), lowestStars(), 500, "xUnbeaten 8 stars", "unbeaten maps with 8 star rating", "easy.thumb");
+        buildPlaylist(stars(9, 10).and(played().negate()), lowestStars(), 500, "xUnbeaten 9 stars", "unbeaten maps with 9 star rating", "easy.thumb");
+        buildPlaylist(stars(10, 11).and(played().negate()), lowestStars(), 500, "x nbeaten x10 stars", "unbeaten maps with 10 star rating", "easy.thumb");
+        buildPlaylist(stars(11, 100).and(played().negate()), lowestStars(), 500, "xUnbeaten x11 stars", "unbeaten maps with 11+ star rating", "easy.thumb");
+
+        buildPlaylist(stars(0, 1).and(rankOver(100)), worstRank(), 30, "Worst 0 Stars >100", "worst 0-1 star songs", "0.thumb");
+        buildPlaylist(stars(1, 2).and(rankOver(100)), worstRank(), 30, "Worst 1 Stars >100", "worst 1-2 star songs", "1.thumb");
+        buildPlaylist(stars(2, 3).and(rankOver(1000)), worstRank(), 30, "Worst 2 Stars >1000", "worst 2-3 star songs", "2.thumb");
+        buildPlaylist(stars(3, 4).and(rankOver(1000)), worstRank(), 30, "Worst 3 Stars >1000", "worst 3-4 star songs", "3.thumb");
+        buildPlaylist(stars(4, 5).and(rankOver(1000)), worstRank(), 30, "Worst 4 Stars >1000", "worst 4-5 star songs", "4.thumb");
+        buildPlaylist(stars(5, 6).and(rankOver(1000)), worstRank(), 30, "Worst 5 Stars >1000", "worst 5-6 star songs", "5.thumb");
     }
 
     public void buildPlaylist(Predicate<Song> filter, Function<Song, Double> sortBy, int limit, String title, String desc, String image) throws IOException {
@@ -62,7 +71,8 @@ public class PlaylistGenerator {
                 });
 
         ObjectWriter writer = OBJECT_MAPPER.writer().withDefaultPrettyPrinter();
-        writer.writeValue(new File(PLAYLIST_PATH + playlist.playlistTitle + ".json"), playlist);
+        String filename = playlist.playlistTitle.replaceAll("[^A-Za-z0-9 ]", "") + ".json";
+        writer.writeValue(new File(PLAYLIST_PATH + filename), playlist);
         System.out.println();
     }
 
@@ -74,6 +84,10 @@ public class PlaylistGenerator {
         return song -> user.getRank(song).isPresent();
     }
 
+    private Predicate<Song> rankOver(int threshold) {
+        return song -> user.getRank(song).orElse(0) >= threshold;
+    }
+
     private Function<Song, Double> worstRank() {
         return song -> -1.0 * user.getRank(song).orElse(1000000);
     }
@@ -83,6 +97,7 @@ public class PlaylistGenerator {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        new DownloadSongs().run();
         new DownloadUserRecentScores().run();
         new PlaylistGenerator().run();
     }

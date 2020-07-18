@@ -8,7 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Optional;
 
-class DownloadSongs {
+public class DownloadSongs {
     private static String SONGS_API = "https://scoresaber.com/api.php?function=get-leaderboards&cat=3&page=1&limit=10000";
 
     public DownloadSongs(){}
