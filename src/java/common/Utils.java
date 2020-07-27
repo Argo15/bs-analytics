@@ -19,9 +19,15 @@ public class Utils {
     public static String RECENT_SCORE_FILEPATH =
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/recent/";
     public static String SONGS_FILEPATH = "api-data/maps.json";
+    public static String LEADERBOARD_FILEPATH = "api-data/leaderboard/";
 
-    public static Optional<String> getPageJson(String page) throws IOException, InterruptedException {
+
+    public static Optional<String> getPage(String page) throws IOException {
         System.out.println(page);
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+        }
         URL apiUrl = new URL(page);
         HttpsURLConnection con = (HttpsURLConnection) apiUrl.openConnection();
         con.setRequestMethod("GET");

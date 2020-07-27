@@ -28,7 +28,7 @@ public class DownloadUserRecentScores {
 
         int curPage = 1;
         while (true) {
-            Optional<String> pageJson = Utils.getPageJson(RECENT_SCORE_API + curPage);
+            Optional<String> pageJson = Utils.getPage(RECENT_SCORE_API + curPage);
             if (!pageJson.isPresent())
             {
                 break;
@@ -43,7 +43,6 @@ public class DownloadUserRecentScores {
                 break;
             }
             curPage++;
-            Thread.sleep(1000);
         }
     }
 

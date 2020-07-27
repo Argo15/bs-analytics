@@ -20,7 +20,7 @@ class DownloadUserTopScores {
 
         int curPage = 1;
         while (true) {
-            Optional<String> pageJson = Utils.getPageJson(TOP_SCORE_API + curPage);
+            Optional<String> pageJson = Utils.getPage(TOP_SCORE_API + curPage);
             if (!pageJson.isPresent())
             {
                 break;
@@ -30,7 +30,6 @@ class DownloadUserTopScores {
             writer.write(pageJson.get());
             writer.close();
             curPage++;
-            Thread.sleep(1000);
         }
     }
 

@@ -14,7 +14,7 @@ public class DownloadSongs {
     public DownloadSongs(){}
 
     public void run() throws IOException, InterruptedException {
-        Optional<String> pageJson = Utils.getPageJson(SONGS_API);
+        Optional<String> pageJson = Utils.getPage(SONGS_API);
         if (!pageJson.isPresent())
         {
             return;

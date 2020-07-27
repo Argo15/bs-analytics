@@ -4,14 +4,13 @@ import data.Score;
 import data.Scores;
 import songs.Song;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.OptionalInt;
+import java.util.*;
 
 public class User {
     private final String userId;
     private Map<Integer, Score> scores = new HashMap<>();
-    private Map<String, Integer> songToRank = new HashMap<>();
+    private Map<Integer, Integer> songToRank = new HashMap<>();
+    private Map<Integer, Double> songToPP = new HashMap<>();
 
     public User(String userId) {
         this.userId = userId;
@@ -29,16 +28,48 @@ public class User {
                 noRepeats = false;
             }
             this.scores.put(score.scoreId, score);
-            songToRank.put(score.songHash+score.difficultyRaw, score.rank);
+            songToRank.put(score.leaderboardId, score.rank);
+            songToPP.put(score.leaderboardId, score.pp);
         }
         return noRepeats;
     }
 
     public OptionalInt getRank(Song song) {
-        String key = song.id + song.diff;
-        if (!songToRank.containsKey(key)) {
+        if (!songToRank.containsKey(song.uid)) {
             return OptionalInt.empty();
         }
-        return OptionalInt.of(songToRank.get(key));
+        return OptionalInt.of(songToRank.get(song.uid));
+    }
+
+    public OptionalDouble getPP(Song song) {
+        if (!songToPP.containsKey(song.uid)) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(songToPP.get(song.uid));
+    }
+
+    public double getTotalPP() {
+        return getTotalPP(0, 0);
+    }
+
+    public double getTotalPP(int overrideSong, double ppOverride) {
+        List<Double> ppList = new ArrayList<>(songToPP.size());
+        for (int uid : songToPP.keySet()) {
+            if (uid == overrideSong) {
+                ppList.add(ppOverride);
+            } else {
+                ppList.add(songToPP.get(uid));
+            }
+        }
+        Collections.sort(ppList);
+        Collections.reverse(ppList);
+        double weight = 1.0;
+        double ppTotal = 0;
+        for (Double pp : ppList) {
+            double weightedPP = pp * weight;
+            ppTotal += weightedPP;
+            weight *= 0.965;
+        }
+        return ppTotal;
     }
 }

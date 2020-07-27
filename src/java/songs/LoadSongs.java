@@ -20,12 +20,9 @@ public class LoadSongs {
         return new SongStore(parsedSongs);
     }
 
-    public void run() throws IOException {
-        loadSongs();
-    }
-
-    public static void main(String[] args) throws IOException {
-        LoadSongs loader = new LoadSongs();
-        loader.run();
+    public static void main(String[] args) throws IOException, InterruptedException {
+        SongStore songs = LoadSongs.loadSongs();
+        double pp = songs.getPPForRank(280301, 30).orElse(0.0);
+        System.out.println(pp);
     }
 }
