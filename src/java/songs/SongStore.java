@@ -18,16 +18,24 @@ import java.util.regex.Pattern;
 public class SongStore {
     private static String LEADERBOARD_URL = "https://scoresaber.com/leaderboard/%d?page=%d";
     private static final Pattern PP_PATTERN = Pattern.compile("ppValue\">([0-9\\.]+)<");
+    private static final Pattern SCORES_PATTERN = Pattern.compile(" Scores: ([,0-9\\.]+) ");
 
     public final Songs rawSongs;
     public final Map<LeaderboardKey, String> leaderboardPages = new HashMap<>();
     public final Map<PPKey, Double> songRankToPP = new HashMap<>();
+    public final Map<Integer, Song> songIdLookup = new HashMap<>();
 
     public SongStore(Songs songs) {
         rawSongs = songs;
+        for (Song song : songs.songs) {
+            songIdLookup.put(song.uid, song);
+        }
     }
 
     public Optional<Double> getPPForRank(int songId, int rank) {
+        if (songIdLookup.containsKey(songId) && songIdLookup.get(songId).scores() < rank) {
+            return Optional.empty();
+        }
         PPKey ppKey = new PPKey(songId, rank);
         if (songRankToPP.containsKey(ppKey)) {
             if (songRankToPP.get(ppKey) == 0.0) {
@@ -72,7 +80,20 @@ public class SongStore {
             leaderboardPages.put(key, _fetchLeaderboardPage(key));
             return;
         }
-        leaderboardPages.put(key, Files.lines(Paths.get(path)).findFirst().orElse(""));
+
+        // Check if page is out of date
+        String page = Files.lines(Paths.get(path)).findFirst().orElse("");
+        Matcher matcher = SCORES_PATTERN.matcher(page);
+        matcher.find();
+        int scores = Integer.parseInt(matcher.group(1).replaceAll(",",""));
+        Song song = songIdLookup.get(key.songId);
+        if (1.1 * scores < song.scores())
+        {
+            leaderboardPages.put(key, _fetchLeaderboardPage(key));
+            return;
+        }
+
+        leaderboardPages.put(key, page);
     }
 
     private String _fetchLeaderboardPage(LeaderboardKey key) throws IOException {

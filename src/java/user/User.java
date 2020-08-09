@@ -61,6 +61,9 @@ public class User {
                 ppList.add(songToPP.get(uid));
             }
         }
+        if (!songToPP.containsKey(overrideSong)) {
+            ppList.add(ppOverride);
+        }
         Collections.sort(ppList);
         Collections.reverse(ppList);
         double weight = 1.0;

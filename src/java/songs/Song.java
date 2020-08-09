@@ -15,7 +15,7 @@ public class Song {
     public double stars;
     public String image;
 
-    public int plays()
+    public int scores()
     {
         return Integer.parseInt(scores.replaceAll(",", ""));
     }
