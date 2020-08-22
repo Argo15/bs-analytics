@@ -220,8 +220,8 @@ public class PlaylistGenerator {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        //new DownloadSongs().run();
-        //new DownloadUserRecentScores().run();
+        new DownloadSongs().run();
+        new DownloadUserRecentScores().run();
         new PlaylistGenerator().run();
     }
 }
