@@ -11,8 +11,8 @@ public class Playlist {
     public String image;
     public ArrayList<SongHash> songs = new ArrayList<>();
 
-    public Playlist(String title, String desc, String image) {
-        playlistTitle = title;
+    public Playlist(String desc, String image) {
+        playlistTitle = "add title";
         playlistDescription = desc;
         this.image = image;
     }

@@ -11,6 +11,7 @@ public class User {
     private Map<Integer, Score> scores = new HashMap<>();
     private Map<Integer, Integer> songToRank = new HashMap<>();
     private Map<Integer, Double> songToPP = new HashMap<>();
+    private Map<Integer, Double> songToPercent = new HashMap<>();
 
     public User(String userId) {
         this.userId = userId;
@@ -30,6 +31,7 @@ public class User {
             this.scores.put(score.scoreId, score);
             songToRank.put(score.leaderboardId, score.rank);
             songToPP.put(score.leaderboardId, score.pp);
+            songToPercent.put(score.leaderboardId, (double) score.score / (double) score.maxScore);
         }
         return noRepeats;
     }
@@ -39,6 +41,13 @@ public class User {
             return OptionalInt.empty();
         }
         return OptionalInt.of(songToRank.get(song.uid));
+    }
+
+    public OptionalDouble getPercent(Song song) {
+        if (!songToPercent.containsKey(song.uid)) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(songToPercent.get(song.uid));
     }
 
     public OptionalDouble getPP(Song song) {

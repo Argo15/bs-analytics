@@ -2,7 +2,6 @@ package playlist;
 
 import data.DownloadSongs;
 import data.DownloadUserRecentScores;
-import org.codehaus.jackson.map.ObjectWriter;
 import songs.LoadSongs;
 import songs.Song;
 import songs.SongStore;
@@ -14,11 +13,10 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static common.Utils.OBJECT_MAPPER;
-
 public class PlaylistGenerator {
-    private static final String PLAYLIST_PATH = "C://Program Files (x86)/Steam/steamapps/common/Beat Saber/Playlists/";
-    private static final String THUMBNAIL_PATH = "thumbnails/";
+    static final String PLAYLIST_PATH = "C://Program Files (x86)/Steam/steamapps/common/Beat Saber/Playlists/";
+    static final String THUMBNAIL_PATH = "thumbnails/";
+    static final Set<String> DOWNLOADED = new HashSet<>();
 
     private static Set<String> TROLL_SONGS = new HashSet<>();
     static {
@@ -39,6 +37,8 @@ public class PlaylistGenerator {
         TROLL_SONGS.add("3F1DACFB11BAE00B17C9F576F07EB77E3148A029");
         TROLL_SONGS.add("06DDBE99BC8AF1EC819CE1A6D5F4760C9EDE6697");
         TROLL_SONGS.add("ED2650077F3DB44A65F890709EE5B4982CDD1494");
+        TROLL_SONGS.add("BE932481AA4F6AD42A86B38EDBE99FA9CF67239E");
+        TROLL_SONGS.add("93E368A2AEB13864B03693420897B27659465CFD");
     }
 
     private SongStore songs;
@@ -47,108 +47,73 @@ public class PlaylistGenerator {
     public PlaylistGenerator() throws IOException {
         songs = LoadSongs.loadSongs();
         user = LoadUser.loadUser();
+        File downloadDir = new File("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber\\Beat Saber_Data\\CustomLevels");
+        for (File file : downloadDir.listFiles()) {
+            DOWNLOADED.add(file.getName().replaceFirst("[^ ]* " , "").toLowerCase());
+        }
     }
 
     public void run() throws IOException {
-        buildPlaylist(stars(0, 1).and(isTroll().negate()), worstRank(), 20, "Worst 0 Stars", "worst 0-1 star songs", "0.thumb", "worst_0_stars.json", true);
-        buildPlaylist(stars(1, 2).and(isTroll().negate()), worstRank(), 20, "Worst 1 Stars", "worst 1-2 star songs", "1.thumb", "worst_1_stars.json", true);
-        buildPlaylist(stars(2, 3).and(isTroll().negate()), worstRank(), 20, "Worst 2 Stars", "worst 2-3 star songs", "2.thumb", "worst_2_stars.json", true);
-        buildPlaylist(stars(3, 4).and(isTroll().negate()), worstRank(), 20, "Worst 3 Stars", "worst 3-4 star songs", "3.thumb", "worst_3_stars.json", true);
-        buildPlaylist(stars(4, 5).and(isTroll().negate()), worstRank(), 20, "Worst 4 Stars", "worst 4-5 star songs", "4.thumb", "worst_4_stars.json", true);
-        buildPlaylist(stars(5, 6).and(isTroll().negate()), worstRank(), 20, "Worst 5 Stars", "worst 5-6 star songs", "5.thumb", "worst_5_stars.json", true);
-        buildPlaylist(stars(0, 6).and(isTroll()), worstRank(), 10, "Worst Troll Stars", "worst Troll songs", "troll.thumb", "worst_troll_stars.json", true);
-        buildPlaylist(stars(6, 7).and(played().negate()), lowestStars(), 500, "xUnbeaten 6 stars", "unbeaten maps with 6 star rating", "easy.thumb", "unbeaten_6_stars.json");
-        buildPlaylist(stars(7, 8).and(played().negate()), lowestStars(), 500, "xUnbeaten 7 stars", "unbeaten maps with 7 star rating", "easy.thumb", "unbeaten_7_stars.json");
-        buildPlaylist(stars(8, 9).and(played().negate()), lowestStars(), 500, "xUnbeaten 8 stars", "unbeaten maps with 8 star rating", "easy.thumb", "unbeaten_8_stars.json");
-        buildPlaylist(stars(9, 10).and(played().negate()), lowestStars(), 500, "xUnbeaten 9 stars", "unbeaten maps with 9 star rating", "easy.thumb", "unbeaten_9_stars.json");
-        buildPlaylist(stars(10, 11).and(played().negate()), lowestStars(), 500, "xUnbeaten x10 stars", "unbeaten maps with 10 star rating", "easy.thumb", "unbeaten_10_stars.json");
-        buildPlaylist(stars(11, 100).and(played().negate()), lowestStars(), 500, "xUnbeaten x11 stars", "unbeaten maps with 11+ star rating", "easy.thumb", "unbeaten_11_stars.json");
-        buildPlaylist(stars(6, 100).and(played().negate()), lowestStars(), 3, "xUnbeaten 0_next", "Suggested maps to grind next", "easy.thumb", "unbeaten_next.json");
+        PlaylistBuilder builder = new PlaylistBuilder(songs, user);
 
-        final int minPPIncrease = 10;
-        final int expectedRank = 300;
+//        int cuts = 1;
+//        int size = 10;
+//        builder.offset(0).limit(size).stars(3,7).filter(played().negate()).sort(rand());
+//        for (int i=0; i<cuts; i++) {
+//            String count = String.valueOf(i);
+//            builder.offset(i * size)
+//                    .title("3-7 star p" + count)
+//                    .image(count + ".thumb");
+//            if (i > 9) {
+//                builder.save("19" + count +"_unplayed.json");
+//            } else {
+//                builder.save("1" + count +"_unplayed.json");
+//            }
+//        }
 
-        // initialize leaderboards
-        for (Song song : songs.rawSongs.songs) {
-            if (song.stars < 7)
-                continue;
-            songs.getPPForRank(song.uid, 300);
+        int cuts = 16;
+        int size = 10;
+        builder = new PlaylistBuilder(songs, user);
+        builder.offset(0).limit(size).stars(8,100).sort(lowestStars())
+                .filter(ppIncreaseAtRankOver(100, 10.0)
+                        .or(ppOver(310)))
+                .title(songs -> {
+                    if (songs.isEmpty()) {
+                        return "empty";
+                    }
+                    double min = songs.stream().mapToDouble(s -> s.stars).min().orElse(0);
+                    double max = songs.stream().mapToDouble(s -> s.stars).max().orElse(0);
+                    return min + " - " + max + " stars";
+                });
+        for (int i=0; i<cuts; i++) {
+            String count = String.valueOf(i);
+            builder.offset(i * size).image(count + ".thumb");
+            if (i > 9) {
+                builder.save("3" + count +"_improve.json");
+            } else {
+                builder.save("2" + count +"_improve.json");
+            }
         }
-        
-        buildPlaylist(stars(0, 100), mostPP(), 50, "Most PP beaten", "Beaten songs that awarded most pp", "avatar.thumb", "most_pp_beaten.json");
 
-        buildPlaylist(
-                stars(7, 100).and(played().negate()).and(ppIncreaseAtRankOver(expectedRank, minPPIncrease)),
-                mostPPAtRank(expectedRank), 100,
-                "Most PP at 300 (unbeaten)",
-                "Most PP at rank 300 (unbeaten)",
-                "shinobu.thumb",
-                "most_pp_increase_unbeaten.json");
-        buildPlaylist(
-                stars(7, 100).and(played()).and(ppIncreaseAtRankOver(expectedRank, minPPIncrease)),
-                ppIncreaseAtRank(expectedRank), 100,
-                "PP increase at 300",
-                "Songs that give most pp if improved to rank 300",
-                "avatar.thumb",
-                "most_pp_increase_beaten.json");
+//        new PlaylistBuilder(songs, user)
+//                .stars(0,1000)
+//                .limit(1000)
+//                .filter(downloaded().negate())
+//                .title("to download")
+//                .image("avatar.thumb")
+//                .save("toDownload.json");
 
         printStats();
     }
 
-    public void buildPlaylist(Predicate<Song> filter, Function<Song, Double> sortBy, int limit, String title, String desc, String image, String filename) throws IOException {
-        buildPlaylist(filter, sortBy, limit, title, desc, image, filename, false);
-    }
-
-    public void buildPlaylist(Predicate<Song> filter, Function<Song, Double> sortBy, int limit, String title, String desc, String image, String filename, boolean addMinRank) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(new File(THUMBNAIL_PATH + image)));
-        Playlist playlist = new Playlist(title, desc, br.readLine());
-        System.out.println("Building " + playlist.playlistTitle);
-
-        ArrayList<Song> filteredSongs = new ArrayList<>();
-        for (Song song : songs.rawSongs.songs) {
-            if (filter.test(song)) {
-                filteredSongs.add(song);
-            }
-        }
-
-        List<Integer> ranks = new ArrayList<>();
-
-        filteredSongs.sort(Comparator.comparingDouble(sortBy::apply));
-        filteredSongs.stream()
-                .limit(limit)
-                .sorted(Comparator.comparing(song -> song.name.toLowerCase()))
-                .forEach(song -> {
-                    playlist.addSong(song);
-                    int rank = user.getRank(song).orElse(song.scores());
-                    ranks.add(rank);
-                });
-        filteredSongs.stream()
-                .limit(limit)
-                .forEach(song -> {
-                    StringBuilder out = new StringBuilder();
-                    user.getRank(song).ifPresent(rank -> out.append(rank));
-                    out.append("(" + -1.0 * sortBy.apply(song) + ") - ");
-                    out.append(song.name + " (" + song.stars + ")");
-                    System.out.println(out);
-                });
-
-        if (addMinRank) {
-            int minRank = ranks.stream().mapToInt(Integer::intValue).min().orElse(0);
-            playlist.playlistTitle = playlist.playlistTitle + " > " + minRank;
-        }
-
-        ObjectWriter writer = OBJECT_MAPPER.writer().withDefaultPrettyPrinter();
-        writer.writeValue(new File(PLAYLIST_PATH + filename), playlist);
-        System.out.println();
-    }
-
-    private Predicate<Song> stars(int minStars, int maxStars) {
+    private Predicate<Song> stars(double minStars, double maxStars) {
         return song -> song.stars >= minStars && song.stars < maxStars;
     }
 
     private Predicate<Song> played() {
         return song -> user.getRank(song).isPresent();
     }
+
 
     private Predicate<Song> rankOver(int threshold) {
         return song -> user.getRank(song).orElse(song.scores()) >= threshold;
@@ -158,12 +123,30 @@ public class PlaylistGenerator {
         return song -> TROLL_SONGS.contains(song.id);
     }
 
+    private Predicate<Song> ppOver(int pp) {
+        return song -> user.getPP(song).orElse(0) >= pp;
+    }
+
     private Predicate<Song> ppAtRankHasPPOver(int rank, int pp) {
         return song -> songs.getPPForRank(song.uid, rank).orElse(0.0) >= pp;
     }
 
-    private Predicate<Song> ppIncreaseAtRankOver(int rank, int pp) {
+    private Predicate<Song> ppIncreaseAtRankOver(int rank, double pp) {
         return song -> -1.0 * ppIncreaseAtRank(rank).apply(song) >= pp;
+    }
+
+    private Predicate<Song> downloaded() {
+        return song -> {
+            if (user.getRank(song).isPresent()) {
+                return true;
+            }
+            for (String name : DOWNLOADED) {
+                if (name.contains(song.id.toLowerCase()) || name.contains(song.name.toLowerCase())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     private Function<Song, Double> worstRank() {
@@ -182,6 +165,10 @@ public class PlaylistGenerator {
         return song -> song.stars;
     }
 
+    private Function<Song, Double> mostStars() {
+        return song -> -1.0 * song.stars;
+    }
+
     private Function<Song, Double> ppIncreaseAtRank(int rank) {
         return song -> {
             double ppAtRank = songs.getPPForRank(song.uid, rank).orElse(0.0);
@@ -191,18 +178,58 @@ public class PlaylistGenerator {
         };
     }
 
+    private Function<Song, Double> recent() {
+        return song -> -1.0 * song.scores_day / song.scores();
+    }
+
+    private Function<Song, Double> nearTop10() {
+        return song -> {
+            double ppAtRank10 = songs.getPPForRank(song.uid, 10).orElse(0.0);
+            double currentPP = user.getPP(song).orElse(0.001);
+            if (user.getRank(song).orElse(1000) <= 10) {
+                return 100000.0; // already top 10
+            }
+            if (ppAtRank10 / currentPP < 1.0) {
+                // bad data, to fix, likely user used no fail or something
+                ppAtRank10 = songs.getPPForRank(song.uid, 9).orElse(0.0);
+            }
+            return ppAtRank10 / currentPP; // larger number is further away from top 10
+        };
+    }
+
+    private Function<Song, Double> rand() {
+        return song -> {
+            Random rand = new Random(song.hashCode());
+            return rand.nextDouble();
+        };
+    }
+
+    private Predicate<Song> expectedPercent(int rank, double minPercent, double maxPercent) {
+        return song -> {
+            double percent = songs.getPercentForRank(song.uid, rank).orElse(0.0);
+            return percent >= minPercent && percent < maxPercent;
+        };
+    }
 
     private void printStats() {
         List<Integer> ranks = new ArrayList<>();
         int numUnbeaten = 0;
-        int sixStarUnbeaten = 0;
+        int sixStarUnbeaten = 2; // for Mare and Ultimate
+        int numTopTen = 0;
+        int numTop20 = 0;
         for (Song song : songs.rawSongs.songs) {
             OptionalInt rank = user.getRank(song);
             if (rank.isPresent()) {
                 ranks.add(rank.getAsInt());
+                if (rank.getAsInt() <= 10) {
+                    numTopTen++;
+                }
+                if (rank.getAsInt() <= 20) {
+                    numTop20++;
+                }
             } else {
                 numUnbeaten++;
-                if (song.stars >= 6) {
+                if (song.stars >= 7) {
                     sixStarUnbeaten++;
                 }
             }
@@ -217,6 +244,8 @@ public class PlaylistGenerator {
         System.out.println("50 percentile: " + ranks.get(ranks.size() / 2));
         System.out.println("75 percentile: " + ranks.get(3 * (ranks.size() / 4)));
         System.out.println("90 percentile: " + ranks.get(9 * (ranks.size() / 10)));
+        System.out.println("Top 10: " + numTopTen + " / " + songs.rawSongs.songs.length);
+        System.out.println("Top 20: " + numTop20 + " / " + songs.rawSongs.songs.length);
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {

@@ -17,12 +17,14 @@ import java.util.regex.Pattern;
 
 public class SongStore {
     private static String LEADERBOARD_URL = "https://scoresaber.com/leaderboard/%d?page=%d";
+    private static final Pattern PERCENT_PATTERN = Pattern.compile("<center>([0-9\\.]+)\\%<\\/center>");
     private static final Pattern PP_PATTERN = Pattern.compile("ppValue\">([0-9\\.]+)<");
     private static final Pattern SCORES_PATTERN = Pattern.compile(" Scores: ([,0-9\\.]+) ");
 
     public final Songs rawSongs;
     public final Map<LeaderboardKey, String> leaderboardPages = new HashMap<>();
-    public final Map<PPKey, Double> songRankToPP = new HashMap<>();
+    public final Map<PageKey, Double> songRankToPP = new HashMap<>();
+    public final Map<PageKey, Double> songRankToPercent = new HashMap<>();
     public final Map<Integer, Song> songIdLookup = new HashMap<>();
 
     public SongStore(Songs songs) {
@@ -33,15 +35,23 @@ public class SongStore {
     }
 
     public Optional<Double> getPPForRank(int songId, int rank) {
+        return getForRank(PP_PATTERN, songRankToPP, songId, rank);
+    }
+
+    public Optional<Double> getPercentForRank(int songId, int rank) {
+        return getForRank(PERCENT_PATTERN, songRankToPercent, songId, rank);
+    }
+
+    private Optional<Double> getForRank(Pattern pattern, Map<PageKey, Double> cache, int songId, int rank) {
         if (songIdLookup.containsKey(songId) && songIdLookup.get(songId).scores() < rank) {
             return Optional.empty();
         }
-        PPKey ppKey = new PPKey(songId, rank);
-        if (songRankToPP.containsKey(ppKey)) {
-            if (songRankToPP.get(ppKey) == 0.0) {
+        PageKey pageKey = new PageKey(songId, rank);
+        if (cache.containsKey(pageKey)) {
+            if (cache.get(pageKey) == 0.0) {
                 return Optional.empty();
             }
-            return Optional.of(songRankToPP.get(ppKey));
+            return Optional.of(cache.get(pageKey));
         }
         int page = ((rank-1) / 12) + 1;
         int index = (rank-1) % 12 + 1;
@@ -51,25 +61,25 @@ public class SongStore {
                 _loadLeaderboardPage(key);
             } catch (IOException e) {
                 e.printStackTrace();
-                songRankToPP.put(ppKey, 0.0);
+                cache.put(pageKey, 0.0);
                 return Optional.empty();
             }
         }
         String pageHtml = leaderboardPages.get(key);
-        Matcher matcher = PP_PATTERN.matcher(pageHtml);
+        Matcher matcher = pattern.matcher(pageHtml);
         int curIdx = 0;
-        String sPP = null;
+        String sVal = null;
         while (matcher.find() && curIdx++ < index) {
-            sPP = matcher.group(1);
+            sVal = matcher.group(1);
         }
-        if (sPP != null)
+        if (sVal != null)
         {
-            Double pp = Double.valueOf(sPP);
-            songRankToPP.put(ppKey, pp);
-            return Optional.of(pp);
+            Double val = Double.valueOf(sVal);
+            cache.put(pageKey, val);
+            return Optional.of(val);
         }
-        System.out.println("Cannot find pp for " + songId + " rank " + rank);
-        songRankToPP.put(ppKey, 0.0);
+        System.out.println("Cannot find page data for " + songId + " rank " + rank);
+        cache.put(pageKey, 0.0);
         return Optional.empty();
     }
 
@@ -141,11 +151,11 @@ public class SongStore {
         }
     }
 
-    private static class PPKey {
+    private static class PageKey {
         private final int songId;
         private final int rank;
 
-        public PPKey(int songId, int rank) {
+        public PageKey(int songId, int rank) {
             this.songId = songId;
             this.rank = rank;
         }
@@ -154,7 +164,7 @@ public class SongStore {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            PPKey that = (PPKey) o;
+            PageKey that = (PageKey) o;
             return songId == that.songId &&
                     rank == that.rank;
         }
