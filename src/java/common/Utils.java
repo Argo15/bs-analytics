@@ -22,7 +22,7 @@ public class Utils {
     public static String LEADERBOARD_FILEPATH = "api-data/leaderboard/";
 
 
-    public static Optional<String> getPage(String page) throws IOException {
+    public synchronized static Optional<String> getPage(String page) throws IOException {
         System.out.println(page);
         try {
             Thread.sleep(1000);

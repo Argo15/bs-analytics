@@ -132,8 +132,6 @@ public class PlaylistBuilder {
 
         System.out.println("Built " + playlist.playlistTitle);
         System.out.println();
-
-        // TODO: Download the map https://beatsaver.com/api/download/key/11b62
     }
 
     private static Predicate<Song> starFilter(double minStars, double maxStars) {
