@@ -51,9 +51,10 @@ public class DownloadBeatmaps {
         }
 
         splitHashes.forEach(hashes -> {
-            Runnable runnable = () -> processHashes(hashes);
-            Thread thread = new Thread(runnable);
-            thread.start();
+//            Runnable runnable = () -> processHashes(hashes);
+//            Thread thread = new Thread(runnable);
+//            thread.start();
+            processHashes(hashes);
         });
     }
 

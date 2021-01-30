@@ -15,7 +15,7 @@ public class MapInfo {
     public String downloadURL;
     public String coverURL;
 
-    private static class MetaData {
+    public static class MetaData {
         public Difficulties difficulties;
         public int duration;
         public String automapper;
@@ -26,7 +26,7 @@ public class MapInfo {
         public String songSubName;
         public int bpm;
 
-        private static class Difficulties {
+        public static class Difficulties {
             public boolean easy;
             public boolean normal;
             public boolean hard;
@@ -34,18 +34,18 @@ public class MapInfo {
             public boolean expertPlus;
         }
 
-        private static class Characteristics {
+        public static class Characteristics {
             public String name;
             public Difficulties difficulties;
 
-            private static class Difficulties {
+            public static class Difficulties {
                 public Characteristic easy;
                 public Characteristic normal;
                 public Characteristic hard;
                 public Characteristic expert;
                 public Characteristic expertPlus;
 
-                private static class Characteristic {
+                public static class Characteristic {
                     public double duration;
                     public int length;
                     public double njs;
@@ -58,7 +58,7 @@ public class MapInfo {
         }
     }
 
-    private static class Stats {
+    public static class Stats {
         public int downloads;
         public int plays;
         public int downVotes;
@@ -67,7 +67,7 @@ public class MapInfo {
         public double rating;
     }
 
-    private static class Uploader {
+    public static class Uploader {
         public String _id;
         public String username;
     }

@@ -1,14 +1,16 @@
 package playlist;
 
-import data.DownloadSongs;
+import data.DownloadBeatmaps;
 import data.DownloadUserRecentScores;
 import songs.LoadSongs;
+import songs.MapInfoStore;
 import songs.Song;
 import songs.SongStore;
 import user.LoadUser;
 import user.User;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -54,29 +56,14 @@ public class PlaylistGenerator {
     }
 
     public void run() throws IOException {
-        PlaylistBuilder builder = new PlaylistBuilder(songs, user);
-
-//        int cuts = 1;
-//        int size = 10;
-//        builder.offset(0).limit(size).stars(3,7).filter(played().negate()).sort(rand());
-//        for (int i=0; i<cuts; i++) {
-//            String count = String.valueOf(i);
-//            builder.offset(i * size)
-//                    .title("3-7 star p" + count)
-//                    .image(count + ".thumb");
-//            if (i > 9) {
-//                builder.save("19" + count +"_unplayed.json");
-//            } else {
-//                builder.save("1" + count +"_unplayed.json");
-//            }
-//        }
+        MapInfoStore mapInfos = new MapInfoStore();
 
         int cuts = 16;
         int size = 10;
-        builder = new PlaylistBuilder(songs, user);
-        builder.offset(0).limit(size).stars(8,100).sort(lowestStars())
-                .filter(ppIncreaseAtRankOver(100, 10.0)
-                        .or(ppOver(310)))
+
+        PlaylistBuilder rankBuilder = new PlaylistBuilder(songs, user);
+        rankBuilder.limit(size).stars(8,100).sort(lowestStars())
+                .filter(ppIncreaseAtRankOver(100, 10.0).or(ppOver(310)))
                 .title(songs -> {
                     if (songs.isEmpty()) {
                         return "empty";
@@ -85,23 +72,34 @@ public class PlaylistGenerator {
                     double max = songs.stream().mapToDouble(s -> s.stars).max().orElse(0);
                     return min + " - " + max + " stars";
                 });
+
+        PlaylistBuilder accBuilder = new PlaylistBuilder(songs, user);
+        accBuilder.stars(0,3).limit(size)
+                .filter(expectedPercent(10, 98.0, 98.5)
+                        .and(song -> mapInfos.getForHash(song.id).metadata.duration >= 80))
+                .sort(worstRank())
+                .title(songs -> {
+                    if (songs.isEmpty()) {
+                        return "empty";
+                    }
+                    int min = songs.stream().mapToInt(s -> effectiveRank(user, s)).min().orElse(0);
+                    int max = songs.stream().mapToInt(s -> effectiveRank(user, s)).max().orElse(0);
+                    return "rank " + min + " - " + max;
+                })
+                .image("easy.thumb");
+
         for (int i=0; i<cuts; i++) {
             String count = String.valueOf(i);
-            builder.offset(i * size).image(count + ".thumb");
+            rankBuilder.offset(i * size).image(count + ".thumb");
+            accBuilder.offset((i * size) % 50);
             if (i > 9) {
-                builder.save("3" + count +"_improve.json");
+                rankBuilder.save("3" + count +"_improve.json");
+                accBuilder.save("3" + count +"_acc.json");
             } else {
-                builder.save("2" + count +"_improve.json");
+                rankBuilder.save("2" + count +"_improve.json");
+                accBuilder.save("2" + count +"_acc.json");
             }
         }
-
-//        new PlaylistBuilder(songs, user)
-//                .stars(0,1000)
-//                .limit(1000)
-//                .filter(downloaded().negate())
-//                .title("to download")
-//                .image("avatar.thumb")
-//                .save("toDownload.json");
 
         printStats();
     }
@@ -150,7 +148,11 @@ public class PlaylistGenerator {
     }
 
     private Function<Song, Double> worstRank() {
-        return song -> -1.0 * user.getRank(song).orElse(song.scores());
+        return song -> -1.0 * effectiveRank(user, song);
+    }
+
+    private static int effectiveRank(User user, Song song) {
+        return user.getRank(song).orElse(song.scores());
     }
 
     private Function<Song, Double> mostPPAtRank(int rank) {
@@ -249,7 +251,7 @@ public class PlaylistGenerator {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        new DownloadSongs().run();
+        new DownloadBeatmaps().run();
         new DownloadUserRecentScores().run();
         new PlaylistGenerator().run();
     }
