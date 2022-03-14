@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class MapInfoStore {
     public static String MAP_INFO_PATH = "api-data/map-info/";
-    private static String MAP_API = "https://beatsaver.com/api/maps/by-hash/";
+    private static String MAP_API = "https://beatsaver.com/api/maps/hash/";
 
     public final Map<String, MapInfo> hashToMapInfo = new HashMap<>();
     public HttpClient client;

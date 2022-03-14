@@ -102,7 +102,7 @@ public class PlaylistBuilder {
         filteredSongs.stream()
                 .skip(offset)
                 .limit(limit)
-                .sorted(Comparator.comparing(song -> song.name.toLowerCase()))
+                //.sorted(Comparator.comparing(song -> song.name.toLowerCase()))
                 .forEach(song -> {
                     playlist.addSong(song);
                     songs.add(song);

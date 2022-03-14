@@ -64,7 +64,7 @@ public class DownloadBeatmaps {
 
     private synchronized void downloadMap(String hash) {
         MapInfo mapInfo = mapInfos.getForHash(hash);
-        String zipURL = "https://beatsaver.com" + mapInfo.directDownload;
+        String zipURL =mapInfo.versions[0].downloadURL;
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(zipURL))

@@ -16,13 +16,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SongStore {
-    private static String LEADERBOARD_URL = "https://scoresaber.com/leaderboard/%d?page=%d";
-    private static final Pattern PERCENT_PATTERN = Pattern.compile("<center>([0-9\\.]+)\\%<\\/center>");
-    private static final Pattern PP_PATTERN = Pattern.compile("ppValue\">([0-9\\.]+)<");
-    private static final Pattern SCORES_PATTERN = Pattern.compile(" Scores: ([,0-9\\.]+) ");
+
+    private static String LEADERBOARD_SCORES_URL = "https://scoresaber.com/api/leaderboard/by-id/%d/scores?page=%d\n";
+    private static final Pattern PERCENT_PATTERN = Pattern.compile("<span>([0-9\\.]+)\\%<\\/span>");
+    private static final Pattern PP_PATTERN = Pattern.compile("\"pp\">([0-9\\.]+)<");
+    private static final Pattern SCORES_PATTERN = Pattern.compile(" plays\": ([,0-9\\.]+) ");
 
     public final Songs rawSongs;
-    public final Map<LeaderboardKey, String> leaderboardPages = new HashMap<>();
+    public final Map<LeaderboardKey, String> leaderboardScorePages = new HashMap<>();
     public final Map<PageKey, Double> songRankToPP = new HashMap<>();
     public final Map<PageKey, Double> songRankToPercent = new HashMap<>();
     public final Map<Integer, Song> songIdLookup = new HashMap<>();
@@ -43,7 +44,8 @@ public class SongStore {
     }
 
     private Optional<Double> getForRank(Pattern pattern, Map<PageKey, Double> cache, int songId, int rank) {
-        if (songIdLookup.containsKey(songId) && songIdLookup.get(songId).scores() < rank) {
+        Song song  = songIdLookup.get(songId);
+        if (song != null && song.scores() < rank) {
             return Optional.empty();
         }
         PageKey pageKey = new PageKey(songId, rank);
@@ -56,16 +58,16 @@ public class SongStore {
         int page = ((rank-1) / 12) + 1;
         int index = (rank-1) % 12 + 1;
         LeaderboardKey key = new LeaderboardKey(songId, page);
-        if (!leaderboardPages.containsKey(key)) {
+        if (!leaderboardScorePages.containsKey(key)) {
             try {
-                _loadLeaderboardPage(key);
+                _loadLeaderboardScorePage(key);
             } catch (IOException e) {
                 e.printStackTrace();
                 cache.put(pageKey, 0.0);
                 return Optional.empty();
             }
         }
-        String pageHtml = leaderboardPages.get(key);
+        String pageHtml = leaderboardScorePages.get(key);
         Matcher matcher = pattern.matcher(pageHtml);
         int curIdx = 0;
         String sVal = null;
@@ -83,11 +85,11 @@ public class SongStore {
         return Optional.empty();
     }
 
-    private void _loadLeaderboardPage(LeaderboardKey key) throws IOException {
+    private void _loadLeaderboardScorePage(LeaderboardKey key) throws IOException {
         String path = Utils.LEADERBOARD_FILEPATH + key.songId + "_" + key.page + ".html";
         File file = new File(path);
         if (!file.exists()) {
-            leaderboardPages.put(key, _fetchLeaderboardPage(key));
+            leaderboardScorePages.put(key, _fetchLeaderboardPage(key));
             return;
         }
 
@@ -99,11 +101,11 @@ public class SongStore {
         Song song = songIdLookup.get(key.songId);
         if (1.1 * scores < song.scores())
         {
-            leaderboardPages.put(key, _fetchLeaderboardPage(key));
+            leaderboardScorePages.put(key, _fetchLeaderboardPage(key));
             return;
         }
 
-        leaderboardPages.put(key, page);
+        leaderboardScorePages.put(key, page);
     }
 
     private String _fetchLeaderboardPage(LeaderboardKey key) throws IOException {
@@ -112,7 +114,7 @@ public class SongStore {
             directory.mkdirs();
         }
 
-        String requestUrl = String.format(LEADERBOARD_URL, key.songId, key.page);
+        String requestUrl = String.format(LEADERBOARD_SCORES_URL, key.songId, key.page);
         Optional<String> pageHTML = Utils.getPage(requestUrl);
         if (!pageHTML.isPresent())
         {

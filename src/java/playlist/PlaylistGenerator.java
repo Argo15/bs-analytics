@@ -19,6 +19,9 @@ public class PlaylistGenerator {
     static final String PLAYLIST_PATH = "C://Program Files (x86)/Steam/steamapps/common/Beat Saber/Playlists/";
     static final String THUMBNAIL_PATH = "thumbnails/";
     static final Set<String> DOWNLOADED = new HashSet<>();
+    static final double MIN_STARS  = 10.00;
+    static final double MIN_STARS_LOWER= 4.2;
+    static final int MAX_RANK = 10000000;
 
     private static Set<String> TROLL_SONGS = new HashSet<>();
     static {
@@ -58,12 +61,41 @@ public class PlaylistGenerator {
     public void run() throws IOException {
         MapInfoStore mapInfos = new MapInfoStore();
 
-        int cuts = 16;
-        int size = 10;
+        int size = 100;
+
+
+        PlaylistBuilder accBuilder = new PlaylistBuilder(songs, user);
+        accBuilder.stars(0,3)
+                .limit(size)
+                .filter(rankOver(MAX_RANK+1).negate())
+                .sort(worstRank())
+                .title(songs -> {
+                    if (songs.isEmpty()) {
+                        return "empty";
+                    }
+                    int min = songs.stream().limit(20).mapToInt(s -> effectiveRank(user, s)).min().orElse(0);
+                    int max = songs.stream().mapToInt(s -> effectiveRank(user, s)).max().orElse(0);
+                    return "rank " + min + " - " + max;
+                })
+                .image("easy.thumb");
+
+
+//        accBuilder
+//                .filter(expectedPercent(20, 98.5, 100).and(rankOver(MAX_RANK+1).negate()))
+//                .save("31_acc.json");
+//        accBuilder
+//                .filter(expectedPercent(20, 98, 98.5).and(rankOver(MAX_RANK+1).negate()))
+//                .save("32_acc.json");
+//        accBuilder
+//                .filter(expectedPercent(20, 97, 98).and(rankOver(MAX_RANK+1).negate()))
+//                .save("33_acc.json");
+//        accBuilder
+//                .filter(expectedPercent(20, 90, 97).and(rankOver(MAX_RANK+1).negate()))
+//                .save("34_acc.json");
+
 
         PlaylistBuilder rankBuilder = new PlaylistBuilder(songs, user);
-        rankBuilder.limit(size).stars(8,100).sort(lowestStars())
-                .filter(ppIncreaseAtRankOver(100, 10.0).or(ppOver(310)))
+        rankBuilder.limit(size).stars(MIN_STARS,100).sort(lowestStars()).offset(0)
                 .title(songs -> {
                     if (songs.isEmpty()) {
                         return "empty";
@@ -73,33 +105,9 @@ public class PlaylistGenerator {
                     return min + " - " + max + " stars";
                 });
 
-        PlaylistBuilder accBuilder = new PlaylistBuilder(songs, user);
-        accBuilder.stars(0,3).limit(size)
-                .filter(expectedPercent(10, 98.0, 98.5)
-                        .and(song -> mapInfos.getForHash(song.id).metadata.duration >= 80))
-                .sort(worstRank())
-                .title(songs -> {
-                    if (songs.isEmpty()) {
-                        return "empty";
-                    }
-                    int min = songs.stream().mapToInt(s -> effectiveRank(user, s)).min().orElse(0);
-                    int max = songs.stream().mapToInt(s -> effectiveRank(user, s)).max().orElse(0);
-                    return "rank " + min + " - " + max;
-                })
-                .image("easy.thumb");
 
-        for (int i=0; i<cuts; i++) {
-            String count = String.valueOf(i);
-            rankBuilder.offset(i * size).image(count + ".thumb");
-            accBuilder.offset((i * size) % 50);
-            if (i > 9) {
-                rankBuilder.save("3" + count +"_improve.json");
-                accBuilder.save("3" + count +"_acc.json");
-            } else {
-                rankBuilder.save("2" + count +"_improve.json");
-                accBuilder.save("2" + count +"_acc.json");
-            }
-        }
+        rankBuilder.stars(10, 100).image("10.thumb").save("21_ten_star.json");
+        rankBuilder.stars(MIN_STARS_LOWER, 10).image("shinobu.thumb").save("22_eight_star.json");
 
         printStats();
     }
@@ -149,6 +157,10 @@ public class PlaylistGenerator {
 
     private Function<Song, Double> worstRank() {
         return song -> -1.0 * effectiveRank(user, song);
+    }
+
+    private Function<Song, Double> percentAtRank(int rank) {
+        return song -> -1.0 * songs.getPercentForRank(song.uid, rank).orElse(-1000000.0);
     }
 
     private static int effectiveRank(User user, Song song) {
@@ -216,7 +228,10 @@ public class PlaylistGenerator {
     private void printStats() {
         List<Integer> ranks = new ArrayList<>();
         int numUnbeaten = 0;
-        int sixStarUnbeaten = 2; // for Mare and Ultimate
+        int sixStarUnbeaten = 0;
+        int tenStarBeaten = 0;
+        int elevenStarBeaten = 0;
+        int twelveStarBeaten = 0;
         int numTopTen = 0;
         int numTop20 = 0;
         for (Song song : songs.rawSongs.songs) {
@@ -229,6 +244,13 @@ public class PlaylistGenerator {
                 if (rank.getAsInt() <= 20) {
                     numTop20++;
                 }
+                if (song.stars >= 12) {
+                    twelveStarBeaten++;
+                } else if (song.stars >= 11) {
+                    elevenStarBeaten++;
+                } else if (song.stars >= 10) {
+                    tenStarBeaten++;
+                }
             } else {
                 numUnbeaten++;
                 if (song.stars >= 7) {
@@ -238,6 +260,9 @@ public class PlaylistGenerator {
         }
 
         System.out.println("Unbeaten: " + numUnbeaten + " (" + sixStarUnbeaten + ")");
+        System.out.println("10* beaten: " + tenStarBeaten);
+        System.out.println("11* beaten: " + elevenStarBeaten);
+        System.out.println(">12* beaten: " + twelveStarBeaten);
         Collections.sort(ranks);
         System.out.println("Ranks");
         System.out.println("avg: " + ranks.stream().mapToInt(Integer::intValue).average().getAsDouble());
