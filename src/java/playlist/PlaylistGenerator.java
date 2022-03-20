@@ -63,7 +63,6 @@ public class PlaylistGenerator {
 
         int size = 100;
 
-
         PlaylistBuilder accBuilder = new PlaylistBuilder(songs, user);
         accBuilder.stars(0,3)
                 .limit(size)
