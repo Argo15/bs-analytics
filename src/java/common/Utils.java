@@ -20,12 +20,14 @@ public class Utils {
             "api-data/player/" + Utils.ARGO_USER_ID + "/scores/recent/";
     public static String SONGS_FILEPATH = "api-data/maps.json";
     public static String LEADERBOARD_FILEPATH = "api-data/leaderboard/";
-
+    // 6 requests per second (global) as of this comment,
+    // do 5, but likely there will be times that's too much
+    public static int API_SLEEP_TIME = 200;
 
     public synchronized static Optional<String> getPage(String page) throws IOException {
         System.out.println(page);
         try {
-            Thread.sleep(1000);
+            Thread.sleep(API_SLEEP_TIME);
         } catch (InterruptedException e) {
         }
         URL apiUrl = new URL(page);

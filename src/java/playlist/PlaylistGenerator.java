@@ -2,8 +2,8 @@ package playlist;
 
 import data.DownloadBeatmaps;
 import data.DownloadUserRecentScores;
+import leaderboard.LeaderboardScoreStore;
 import songs.LoadSongs;
-import songs.MapInfoStore;
 import songs.Song;
 import songs.SongStore;
 import user.LoadUser;
@@ -19,9 +19,7 @@ public class PlaylistGenerator {
     static final String PLAYLIST_PATH = "C://Program Files (x86)/Steam/steamapps/common/Beat Saber/Playlists/";
     static final String THUMBNAIL_PATH = "thumbnails/";
     static final Set<String> DOWNLOADED = new HashSet<>();
-    static final double MIN_STARS  = 10.00;
-    static final double MIN_STARS_LOWER= 4.2;
-    static final int MAX_RANK = 10000000;
+    static final int PLAYLIST_SIZE = 100;
 
     private static Set<String> TROLL_SONGS = new HashSet<>();
     static {
@@ -48,10 +46,12 @@ public class PlaylistGenerator {
 
     private SongStore songs;
     private User user;
+    private LeaderboardScoreStore leaderboardScores;
 
     public PlaylistGenerator() throws IOException {
         songs = LoadSongs.loadSongs();
         user = LoadUser.loadUser();
+        leaderboardScores = new LeaderboardScoreStore(songs);
         File downloadDir = new File("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber\\Beat Saber_Data\\CustomLevels");
         for (File file : downloadDir.listFiles()) {
             DOWNLOADED.add(file.getName().replaceFirst("[^ ]* " , "").toLowerCase());
@@ -59,56 +59,74 @@ public class PlaylistGenerator {
     }
 
     public void run() throws IOException {
-        MapInfoStore mapInfos = new MapInfoStore();
+        buildAcc();
+        buildRank();
+        //buildPractice();
+        printStats();
+    }
 
-        int size = 100;
-
+    // PP doesn't matter, so go prioritize leaderboard position
+    private void buildAcc() throws IOException {
         PlaylistBuilder accBuilder = new PlaylistBuilder(songs, user);
         accBuilder.stars(0,3)
-                .limit(size)
-                .filter(rankOver(MAX_RANK+1).negate())
+                .limit(PLAYLIST_SIZE)
                 .sort(worstRank())
                 .title(songs -> {
-                    if (songs.isEmpty()) {
-                        return "empty";
-                    }
+                    if (songs.isEmpty()) return "empty";
                     int min = songs.stream().limit(20).mapToInt(s -> effectiveRank(user, s)).min().orElse(0);
                     int max = songs.stream().mapToInt(s -> effectiveRank(user, s)).max().orElse(0);
-                    return "rank " + min + " - " + max;
+                    double minPP = songs.stream().mapToDouble(this::expectedPP).min().orElse(0);
+                    double maxPP = songs.stream().mapToDouble(this::expectedPP).max().orElse(0);
+                    return "rank " + min + " - " + max + " | " + minPP + " - " + maxPP + " pp";
                 })
                 .image("easy.thumb");
+        Predicate<Song> accFilter = played().negate();
+        accBuilder.filter(rankBelow(100000).and(expectedPercent(20, 98.35, 100)).and(accFilter)).image("0.thumb").save("30_acc.json");
+        accBuilder.filter(rankBelow(100000).and(expectedPercent(20, 97.9, 98.35)).and(accFilter)).image("1.thumb").save("31_acc.json");
+        accBuilder.filter(rankBelow(100000).and(expectedPercent(20, 0, 97.9)).and(accFilter)).image("2.thumb").save("32_acc.json");
+        accBuilder.stars(3, 4).filter(rankBelow(100000).and(accFilter)).image("3.thumb").save("33_acc.json");
+        accBuilder.stars(4, 5).filter(rankBelow(100000).and(accFilter)).image("4.thumb").save("34_acc.json");
+        accBuilder.stars(5, 6).filter(rankBelow(100000).and(accFilter)).image("5.thumb").save("35_acc.json");
+    }
 
-
-//        accBuilder
-//                .filter(expectedPercent(20, 98.5, 100).and(rankOver(MAX_RANK+1).negate()))
-//                .save("31_acc.json");
-//        accBuilder
-//                .filter(expectedPercent(20, 98, 98.5).and(rankOver(MAX_RANK+1).negate()))
-//                .save("32_acc.json");
-//        accBuilder
-//                .filter(expectedPercent(20, 97, 98).and(rankOver(MAX_RANK+1).negate()))
-//                .save("33_acc.json");
-//        accBuilder
-//                .filter(expectedPercent(20, 90, 97).and(rankOver(MAX_RANK+1).negate()))
-//                .save("34_acc.json");
-
-
+    // optimize by PP reward
+    private void buildRank() throws IOException {
         PlaylistBuilder rankBuilder = new PlaylistBuilder(songs, user);
-        rankBuilder.limit(size).stars(MIN_STARS,100).sort(lowestStars()).offset(0)
+        rankBuilder.limit(PLAYLIST_SIZE)
+                .sort(expectedPPSort())
+                .filter(played().negate())
                 .title(songs -> {
-                    if (songs.isEmpty()) {
-                        return "empty";
-                    }
+                    if (songs.isEmpty()) return "empty";
                     double min = songs.stream().mapToDouble(s -> s.stars).min().orElse(0);
                     double max = songs.stream().mapToDouble(s -> s.stars).max().orElse(0);
-                    return min + " - " + max + " stars";
+                    double minPP = songs.stream().mapToDouble(this::expectedPP).min().orElse(0);
+                    double maxPP = songs.stream().mapToDouble(this::expectedPP).max().orElse(0);
+                    return min + " - " + max + " stars | " + minPP + " - " + maxPP + " pp";
                 });
+        rankBuilder.stars(6, 7).image("6.thumb").save("46_rank.json");
+        rankBuilder.stars(7, 8).image("7.thumb").save("47_rank.json");
+        rankBuilder.stars(8, 9).image("8.thumb").save("48_rank.json");
+        rankBuilder.stars(9, 10).image("9.thumb").save("490_rank.json");
+        rankBuilder.stars(10, 11).image("10.thumb").save("491_rank.json");
+        rankBuilder.stars(11, 100).image("11.thumb").save("492_rank.json");
+    }
 
+    private void buildPractice() throws IOException {
+        PlaylistBuilder builder = new PlaylistBuilder(songs, user);
+        builder.limit(200)
+                .sort(lowestStars())
+                .filter(song -> leaderboardScores.info.getDaysOld(song) <= 500)
+                .title(songs -> {
+                    if (songs.isEmpty()) return "empty";
+                    double min = songs.stream().mapToDouble(s -> s.stars).min().orElse(0);
+                    double max = songs.stream().mapToDouble(s -> s.stars).max().orElse(0);
+                    return min + " - " + max + " stars (practice)";
+                });
+        builder.stars(4, 100).image("shinobu.thumb").save("80_practice.json");
+    }
 
-        rankBuilder.stars(10, 100).image("10.thumb").save("21_ten_star.json");
-        rankBuilder.stars(MIN_STARS_LOWER, 10).image("shinobu.thumb").save("22_eight_star.json");
-
-        printStats();
+    private Predicate<Song> ePPBelow(double threshold) {
+        return song -> expectedPP(song) < threshold;
     }
 
     private Predicate<Song> stars(double minStars, double maxStars) {
@@ -124,6 +142,10 @@ public class PlaylistGenerator {
         return song -> user.getRank(song).orElse(song.scores()) >= threshold;
     }
 
+    private Predicate<Song> rankBelow(int threshold) {
+        return rankOver(threshold).negate();
+    }
+
     private Predicate<Song> isTroll() {
         return song -> TROLL_SONGS.contains(song.id);
     }
@@ -132,13 +154,9 @@ public class PlaylistGenerator {
         return song -> user.getPP(song).orElse(0) >= pp;
     }
 
-    private Predicate<Song> ppAtRankHasPPOver(int rank, int pp) {
-        return song -> songs.getPPForRank(song.uid, rank).orElse(0.0) >= pp;
-    }
-
-    private Predicate<Song> ppIncreaseAtRankOver(int rank, double pp) {
-        return song -> -1.0 * ppIncreaseAtRank(rank).apply(song) >= pp;
-    }
+//    private Predicate<Song> ppIncreaseAtRankOver(int rank, double pp) {
+//        return song -> -1.0 * ppIncreaseAtRank(rank).apply(song) >= pp;
+//    }
 
     private Predicate<Song> downloaded() {
         return song -> {
@@ -158,16 +176,17 @@ public class PlaylistGenerator {
         return song -> -1.0 * effectiveRank(user, song);
     }
 
-    private Function<Song, Double> percentAtRank(int rank) {
-        return song -> -1.0 * songs.getPercentForRank(song.uid, rank).orElse(-1000000.0);
-    }
-
     private static int effectiveRank(User user, Song song) {
         return user.getRank(song).orElse(song.scores());
     }
 
-    private Function<Song, Double> mostPPAtRank(int rank) {
-        return song -> -1.0 * songs.getPPForRank(song.uid, rank).orElse(-1000000.0);
+    private Function<Song, Double> expectedPPSort() { return song ->  -1.0 * expectedPP(song); }
+
+    private double expectedPP(Song song) {
+        int daysOld = leaderboardScores.info.getDaysOld(song);
+        // expected rank is 40 if brand new, 100 if older than 60 days
+        int expectedRank = Math.min(40 + daysOld, 100);
+        return leaderboardScores.getScore(song, expectedRank).map(lb -> lb.pp).orElse(0.0);
     }
 
     private Function<Song, Double> mostPP() {
@@ -182,32 +201,17 @@ public class PlaylistGenerator {
         return song -> -1.0 * song.stars;
     }
 
-    private Function<Song, Double> ppIncreaseAtRank(int rank) {
-        return song -> {
-            double ppAtRank = songs.getPPForRank(song.uid, rank).orElse(0.0);
-            double currentPP = user.getTotalPP();
-            double newPP = user.getTotalPP(song.uid, ppAtRank);
-            return -1.0 * (newPP - currentPP);
-        };
-    }
+//    private Function<Song, Double> ppIncreaseAtRank(int rank) {
+//        return song -> {
+//            double ppAtRank = songs.getPPForRank(song.uid, rank).orElse(0.0);
+//            double currentPP = user.getTotalPP();
+//            double newPP = user.getTotalPP(song.uid, ppAtRank);
+//            return -1.0 * (newPP - currentPP);
+//        };
+//    }
 
     private Function<Song, Double> recent() {
         return song -> -1.0 * song.scores_day / song.scores();
-    }
-
-    private Function<Song, Double> nearTop10() {
-        return song -> {
-            double ppAtRank10 = songs.getPPForRank(song.uid, 10).orElse(0.0);
-            double currentPP = user.getPP(song).orElse(0.001);
-            if (user.getRank(song).orElse(1000) <= 10) {
-                return 100000.0; // already top 10
-            }
-            if (ppAtRank10 / currentPP < 1.0) {
-                // bad data, to fix, likely user used no fail or something
-                ppAtRank10 = songs.getPPForRank(song.uid, 9).orElse(0.0);
-            }
-            return ppAtRank10 / currentPP; // larger number is further away from top 10
-        };
     }
 
     private Function<Song, Double> rand() {
@@ -219,7 +223,9 @@ public class PlaylistGenerator {
 
     private Predicate<Song> expectedPercent(int rank, double minPercent, double maxPercent) {
         return song -> {
-            double percent = songs.getPercentForRank(song.uid, rank).orElse(0.0);
+            int maxScore = leaderboardScores.info.getMaxScore(song, -100000000);
+            int scoreAtRank = leaderboardScores.getScore(song, rank).map(score -> score.baseScore).orElse(0);
+            double percent = 100.0 * ((double) scoreAtRank / (double) maxScore);
             return percent >= minPercent && percent < maxPercent;
         };
     }
@@ -233,7 +239,7 @@ public class PlaylistGenerator {
         int twelveStarBeaten = 0;
         int numTopTen = 0;
         int numTop20 = 0;
-        for (Song song : songs.rawSongs.songs) {
+        for (Song song : songs.rawSongs) {
             OptionalInt rank = user.getRank(song);
             if (rank.isPresent()) {
                 ranks.add(rank.getAsInt());
@@ -258,23 +264,25 @@ public class PlaylistGenerator {
             }
         }
 
-        System.out.println("Unbeaten: " + numUnbeaten + " (" + sixStarUnbeaten + ")");
-        System.out.println("10* beaten: " + tenStarBeaten);
-        System.out.println("11* beaten: " + elevenStarBeaten);
-        System.out.println(">12* beaten: " + twelveStarBeaten);
-        Collections.sort(ranks);
-        System.out.println("Ranks");
-        System.out.println("avg: " + ranks.stream().mapToInt(Integer::intValue).average().getAsDouble());
-        System.out.println("10 percentile: " + ranks.get(ranks.size() / 10));
+        System.out.println("Unbeaten: " + numUnbeaten + " (" + sixStarUnbeaten + " 7+ stars)");
+        System.out.println("10 star beaten: " + tenStarBeaten);
+        System.out.println("11+ star beaten: " + (elevenStarBeaten + twelveStarBeaten));
+        //System.out.println(">12* beaten: " + twelveStarBeaten);
+        //Collections.sort(ranks);
+        //System.out.println("Ranks");
+        System.out.println("avg rank: " + ranks.stream().mapToInt(Integer::intValue).average().getAsDouble());
+        /*System.out.println("10 percentile: " + ranks.get(ranks.size() / 10));
         System.out.println("25 percentile: " + ranks.get(ranks.size() / 4));
         System.out.println("50 percentile: " + ranks.get(ranks.size() / 2));
         System.out.println("75 percentile: " + ranks.get(3 * (ranks.size() / 4)));
         System.out.println("90 percentile: " + ranks.get(9 * (ranks.size() / 10)));
         System.out.println("Top 10: " + numTopTen + " / " + songs.rawSongs.songs.length);
-        System.out.println("Top 20: " + numTop20 + " / " + songs.rawSongs.songs.length);
+        System.out.println("Top 20: " + numTop20 + " / " + songs.rawSongs.songs.length);*/
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        //new DownloadSongs().run();
+        //new FetchLeaderboards().run();
         new DownloadBeatmaps().run();
         new DownloadUserRecentScores().run();
         new PlaylistGenerator().run();

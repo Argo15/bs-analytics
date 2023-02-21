@@ -28,6 +28,7 @@ public class PlaylistBuilder {
     private Predicate<Song> filter = s -> true;
     private Function<Song, Double> sortBy = (song) -> song.stars;
     private int limit = 100;
+    private int printLimit = 20;
     private int offset = 0;
     private Function<List<Song>, String> titleFunc;
     private String description = "";
@@ -56,6 +57,11 @@ public class PlaylistBuilder {
 
     public PlaylistBuilder limit(int limit) {
         this.limit = limit;
+        return this;
+    }
+
+    public PlaylistBuilder printLimit(int printLimit) {
+        this.printLimit = printLimit;
         return this;
     }
 
@@ -89,7 +95,7 @@ public class PlaylistBuilder {
         Playlist playlist = new Playlist(description, br.readLine());
 
         ArrayList<Song> filteredSongs = new ArrayList<>();
-        for (Song song : songs.rawSongs.songs) {
+        for (Song song : songs.rawSongs) {
             if (starFilter(minStars, maxStars).and(filter).test(song)) {
                 filteredSongs.add(song);
             }
@@ -111,7 +117,7 @@ public class PlaylistBuilder {
                 });
         filteredSongs.stream()
                 .skip(offset)
-                .limit(limit)
+                .limit(printLimit)
                 .forEach(song -> {
                     StringBuilder out = new StringBuilder();
                     user.getRank(song).ifPresent(out::append);
@@ -130,6 +136,7 @@ public class PlaylistBuilder {
         ObjectWriter writer = OBJECT_MAPPER.writer().withDefaultPrettyPrinter();
         writer.writeValue(new File(PLAYLIST_PATH + filename), playlist);
 
+        System.out.println("Songs: " + filteredSongs.size());
         System.out.println("Built " + playlist.playlistTitle);
         System.out.println();
     }

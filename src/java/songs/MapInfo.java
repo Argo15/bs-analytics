@@ -19,6 +19,7 @@ public class MapInfo {
     public String updatedAt;
     public String lastPublishedAt;
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Version {
         public String hash;
         public String key;
@@ -30,6 +31,7 @@ public class MapInfo {
         public String coverURL;
         public String previewURL;
 
+        @JsonIgnoreProperties(ignoreUnknown = true)
         public static class Difficulties {
             public int njs;
             public double offset;
@@ -57,6 +59,7 @@ public class MapInfo {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Uploader {
         public String id;
         public String name;
@@ -66,6 +69,7 @@ public class MapInfo {
         public String type;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MetaData {
         public int duration;
         public String automapper;
@@ -76,6 +80,7 @@ public class MapInfo {
         public int bpm;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Stats {
         public int downloads;
         public int plays;

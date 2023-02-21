@@ -1,6 +1,7 @@
 package leaderboard;
 
 import common.Utils;
+import songs.Song;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,19 +9,27 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import static java.time.temporal.ChronoUnit.DAYS;
 
 public class LeaderboardInfoStore {
     public static String LEADERBOARD_INFO_FILEPATH = Utils.LEADERBOARD_FILEPATH + "info/";
     private static String LEADERBOARD_INFO_ID_URL = "https://scoresaber.com/api/leaderboard/by-id/%d/info";
     private static String LEADERBOARD_INFO_HASH_URL = "https://scoresaber.com/api/leaderboard/by-hash/%s/info?difficulty=%d";
+    public static LocalDateTime CURRENT_DATE = LocalDateTime.now();
 
     public final Map<String, String> leaderboardInfoPages = new HashMap<>();
     public final Map<String, LeaderboardInfo> cache = new HashMap<>();
 
     public LeaderboardInfoStore(){}
+
+    public Optional<LeaderboardInfo> getInfo(Song song) {
+        return getInfoByHash(song.id, song.difficulty());
+    }
 
     public Optional<LeaderboardInfo> getInfoById(int leaderboardId) {
         String key = String.valueOf(leaderboardId);
@@ -34,12 +43,32 @@ public class LeaderboardInfoStore {
         return getInfo(key, requestUrl);
     }
 
+    public int getMaxScore(Song song, int defaultVal) {
+        return getMaxScore(song.id, song.difficulty(), defaultVal);
+    }
+
     public int getMaxScore(int leaderboardId, int defaultVal) {
         return getInfoById(leaderboardId).map(info -> info.maxScore).orElse(defaultVal);
     }
 
     public int getMaxScore(String hash, int difficulty, int defaultVal) {
         return getInfoByHash(hash, difficulty).map(info -> info.maxScore).orElse(defaultVal);
+    }
+
+    public int getTotalPlays(int leaderboardId) {
+        return getInfoById(leaderboardId).map(info -> info.plays).orElse(0);
+    }
+
+    public int getTotalPlays(String hash, int difficulty) {
+        return getInfoByHash(hash, difficulty).map(info -> info.plays).orElse(0);
+    }
+
+    public int getDaysOld(Song song) {
+        LeaderboardInfo info = getInfo(song).orElse(null);
+        if (info == null || info.rankedDate == null) return 1000000;
+        String date = info.rankedDate.substring(0, info.rankedDate.length() - 5);
+        LocalDateTime dateTime = LocalDateTime.parse(date);
+        return (int) DAYS.between(dateTime, CURRENT_DATE);
     }
 
     public Optional<LeaderboardInfo> getInfo(String key, String requestUrl) {

@@ -9,21 +9,31 @@ import java.io.IOException;
 import java.util.Optional;
 
 public class DownloadSongs {
-    private static String SONGS_API = "https://scoresaber.com/api.php?function=get-leaderboards&cat=3&page=1&limit=10000";
+    public static String SONGS_DIRECTORY = "api-data/songs/";
+    private static String SONGS_API = "https://scoresaber.com/api.php?function=get-leaderboards&cat=3&limit=20&page=%d";
 
     public DownloadSongs(){}
 
     public void run() throws IOException, InterruptedException {
-        Optional<String> pageJson = Utils.getPage(SONGS_API);
-        if (!pageJson.isPresent())
-        {
-            return;
+        File directory = new File(SONGS_DIRECTORY);
+        if (!directory.exists()) {
+            directory.mkdirs();
         }
 
-        File filename = new File(Utils.SONGS_FILEPATH);
-        BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
-        writer.write(pageJson.get());
-        writer.close();
+        int page = 1;
+        while (page < 1000) {
+            Optional<String> pageJson = Utils.getPage(String.format(SONGS_API, page));
+            if (!pageJson.isPresent() || pageJson.get().contains("songs: [ ]"))
+            {
+                break;
+            }
+
+            File filename = new File(SONGS_DIRECTORY + page + ".json");
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+            writer.write(pageJson.get());
+            writer.close();
+            page++;
+        }
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {

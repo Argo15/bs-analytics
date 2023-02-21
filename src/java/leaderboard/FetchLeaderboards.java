@@ -13,7 +13,7 @@ import static leaderboard.LeaderboardInfoStore.LEADERBOARD_INFO_FILEPATH;
 public class FetchLeaderboards {
     private static String LEADERBOARD_URL = "https://scoresaber.com/api/leaderboards?ranked=true&page=%d";
 
-    private FetchLeaderboards() throws IOException {
+    public FetchLeaderboards() throws IOException {
         int currentPage = 1;
         Leaderboards page = null;
 

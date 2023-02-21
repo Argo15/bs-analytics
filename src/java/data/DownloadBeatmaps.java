@@ -1,5 +1,6 @@
 package data;
 
+import common.Utils;
 import songs.LoadSongs;
 import songs.MapInfo;
 import songs.MapInfoStore;
@@ -31,10 +32,9 @@ public class DownloadBeatmaps {
     }
 
     public void run() throws IOException, InterruptedException {
-        new DownloadSongs().run();
         songs = LoadSongs.loadSongs();
 
-        Set<String> songHashes = Arrays.stream(songs.rawSongs.songs)
+        Set<String> songHashes = songs.rawSongs.stream()
                 .map(s -> s.id.toLowerCase())
                 .filter(hash -> !Files.exists(Paths.get(MAP_DIR + hash)))
                 .collect(Collectors.toSet());
@@ -111,7 +111,7 @@ public class DownloadBeatmaps {
             numProcessed++;
             printProgress();
 
-            Thread.sleep(1000);
+            Thread.sleep(Utils.API_SLEEP_TIME);
         } catch (Exception e) {
             e.printStackTrace();
         }

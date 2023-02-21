@@ -21,13 +21,14 @@ public class LeaderboardInfo {
     public boolean loved;
     public double maxPP;
     public double stars;
-    public double plays;
+    public int plays;
     public int dailyPlays;
     public boolean positiveModifiers;
     //  public Score playerScore; TODO - not showing up until my profile becomes active again
     public String coverImage;
     public Difficulty[] difficulties;
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Difficulty {
         public int leaderboardId;
         public int difficulty;

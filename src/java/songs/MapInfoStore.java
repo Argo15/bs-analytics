@@ -56,7 +56,7 @@ public class MapInfoStore {
 
     public synchronized String fetchPage(String URL) throws IOException {
         try {
-            Thread.sleep(1000);
+            Thread.sleep(Utils.API_SLEEP_TIME);
         } catch (InterruptedException e) {
         }
         HttpRequest request = HttpRequest.newBuilder()

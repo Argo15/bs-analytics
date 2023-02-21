@@ -3,8 +3,8 @@ package leaderboard;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Leaderboards {
-    public LeaderboardInfo[] leaderboards;
+public class LeaderboardScoresPage {
+    public LeaderboardScore[] scores;
     public Metadata metadata;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
