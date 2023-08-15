@@ -20,13 +20,18 @@ public class DownloadSongs {
             directory.mkdirs();
         }
 
+        int errorCnt = 0;
         int page = 1;
         while (page < 1000) {
             Optional<String> pageJson = Utils.getPage(String.format(SONGS_API, page));
             if (!pageJson.isPresent() || pageJson.get().contains("songs: [ ]"))
             {
-                break;
+                if (errorCnt++ > 10  || pageJson.get().contains("songs: [ ]"))
+                    break;
+                else
+                    continue;
             }
+            errorCnt = 0;
 
             File filename = new File(SONGS_DIRECTORY + page + ".json");
             BufferedWriter writer = new BufferedWriter(new FileWriter(filename));

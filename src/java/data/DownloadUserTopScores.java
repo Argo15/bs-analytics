@@ -18,13 +18,18 @@ class DownloadUserTopScores {
             directory.mkdirs();
         }
 
-        int curPage = 1;
+        int errorCnt = 0;
+        int curPage = 0;
         while (true) {
             Optional<String> pageJson = Utils.getPage(TOP_SCORE_API + curPage);
             if (!pageJson.isPresent())
             {
-                break;
+                if (errorCnt++ > 10)
+                    break;
+                else
+                    continue;
             }
+            errorCnt = 0;
             String filename = Utils.TOP_SCORE_FILEPATH + curPage + ".json";
             BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
             writer.write(pageJson.get());

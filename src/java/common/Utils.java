@@ -22,7 +22,8 @@ public class Utils {
     public static String LEADERBOARD_FILEPATH = "api-data/leaderboard/";
     // 6 requests per second (global) as of this comment,
     // do 5, but likely there will be times that's too much
-    public static int API_SLEEP_TIME = 200;
+    public static int API_SLEEP_TIME = 500;
+    public static int RECOVER_TIME = 2000;
 
     public synchronized static Optional<String> getPage(String page) throws IOException {
         System.out.println(page);
@@ -46,6 +47,9 @@ public class Utils {
             return Optional.of(response.toString());
         } else {
             System.out.println("Failed " + page);
+            try {
+                Thread.sleep(RECOVER_TIME);
+            } catch (InterruptedException e) {}
             return Optional.empty();
         }
     }

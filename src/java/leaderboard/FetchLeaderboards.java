@@ -14,7 +14,7 @@ public class FetchLeaderboards {
     private static String LEADERBOARD_URL = "https://scoresaber.com/api/leaderboards?ranked=true&page=%d";
 
     public FetchLeaderboards() throws IOException {
-        int currentPage = 1;
+        int currentPage = 0;
         Leaderboards page = null;
 
         File directory = new File(LEADERBOARD_INFO_FILEPATH);
@@ -25,6 +25,7 @@ public class FetchLeaderboards {
         do {
             String requestUrl = String.format(LEADERBOARD_URL, currentPage++);
             Optional<String> pageHTML = Utils.getPage(requestUrl);
+
             if (!pageHTML.isPresent()) {
                 System.out.println("Page Failed: " + requestUrl);
                 continue;

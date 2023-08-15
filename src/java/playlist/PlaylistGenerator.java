@@ -1,6 +1,5 @@
 package playlist;
 
-import data.DownloadBeatmaps;
 import data.DownloadUserRecentScores;
 import leaderboard.LeaderboardScoreStore;
 import songs.LoadSongs;
@@ -61,7 +60,7 @@ public class PlaylistGenerator {
     public void run() throws IOException {
         buildAcc();
         buildRank();
-        //buildPractice();
+        buildPractice();
         printStats();
     }
 
@@ -93,8 +92,8 @@ public class PlaylistGenerator {
     private void buildRank() throws IOException {
         PlaylistBuilder rankBuilder = new PlaylistBuilder(songs, user);
         rankBuilder.limit(PLAYLIST_SIZE)
+                //.sort(lowestStars())
                 .sort(expectedPPSort())
-                .filter(played().negate())
                 .title(songs -> {
                     if (songs.isEmpty()) return "empty";
                     double min = songs.stream().mapToDouble(s -> s.stars).min().orElse(0);
@@ -113,16 +112,16 @@ public class PlaylistGenerator {
 
     private void buildPractice() throws IOException {
         PlaylistBuilder builder = new PlaylistBuilder(songs, user);
-        builder.limit(200)
+        builder.limit(PLAYLIST_SIZE)
                 .sort(lowestStars())
-                .filter(song -> leaderboardScores.info.getDaysOld(song) <= 500)
+                .filter(played().negate().and(song -> leaderboardScores.info.getDaysOld(song) <= 750))
                 .title(songs -> {
                     if (songs.isEmpty()) return "empty";
                     double min = songs.stream().mapToDouble(s -> s.stars).min().orElse(0);
                     double max = songs.stream().mapToDouble(s -> s.stars).max().orElse(0);
                     return min + " - " + max + " stars (practice)";
                 });
-        builder.stars(4, 100).image("shinobu.thumb").save("80_practice.json");
+        builder.stars(6.9, 100).image("shinobu.thumb").save("80_practice.json");
     }
 
     private Predicate<Song> ePPBelow(double threshold) {
@@ -184,8 +183,9 @@ public class PlaylistGenerator {
 
     private double expectedPP(Song song) {
         int daysOld = leaderboardScores.info.getDaysOld(song);
-        // expected rank is 40 if brand new, 100 if older than 60 days
-        int expectedRank = Math.min(40 + daysOld, 100);
+        int yearsOld = Math.min(daysOld / 365, 5);
+        // expected rank is 40 if brand new, 100 if older than 60 days. Then add 50 for each year
+        int expectedRank = Math.min(40 + daysOld, 100) + 50 * yearsOld;
         return leaderboardScores.getScore(song, expectedRank).map(lb -> lb.pp).orElse(0.0);
     }
 
@@ -283,7 +283,7 @@ public class PlaylistGenerator {
     public static void main(String[] args) throws IOException, InterruptedException {
         //new DownloadSongs().run();
         //new FetchLeaderboards().run();
-        new DownloadBeatmaps().run();
+        //new DownloadBeatmaps().run();
         new DownloadUserRecentScores().run();
         new PlaylistGenerator().run();
     }
